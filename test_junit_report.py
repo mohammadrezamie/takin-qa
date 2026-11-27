@@ -75,3 +75,14 @@ class JUnitTests(unittest.TestCase):
         report = self.parse(xml)
         self.assertEqual(report["cases"], [{"id": "a", "status": "fail"}])
         self.assertNotIn("synthetic-private-text", repr(report))
+
+    def test_summary_only_failure_is_rejected(self):
+        for field in ("failures", "errors", "skipped", "disabled"):
+            xml = f'<testsuite {field}="1"><testcase classname="Suite" name="first"/><testcase classname="Suite" name="second"/></testsuite>'
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "contradicts"):
+                self.parse(xml)
+
+    def test_suppressed_result_is_blocked(self):
+        xml = '<testsuite><testcase classname="Suite" name="first" result="suppressed"/><testcase classname="Suite" name="second"/></testsuite>'
+        self.assertFalse(self.summary(xml)["ok"])
+        self.assertEqual(self.summary(xml)["counts"]["blocked"], 1)
