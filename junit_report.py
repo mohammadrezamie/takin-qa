@@ -53,6 +53,15 @@ def _cases(suite):
     if declared is not None and (not re.fullmatch(r"[0-9]+", declared)
                                  or int(declared) != len(rows)):
         raise ValueError("suite test count does not match observed cases")
+    # Summary counters may not hide suite-level errors or non-execution.
+    # Exact failure/error splits vary by exporter; a declared non-pass
+    # count may not exceed the number of observed non-pass case outcomes.
+    nonpass = sum(_status(row) != "pass" for row in rows)
+    for field in ("failures", "errors", "skipped", "disabled"):
+        value = suite.get(field)
+        if value is not None and (not re.fullmatch(r"[0-9]+", value)
+                                  or int(value) > nonpass):
+            raise ValueError("suite outcome count contradicts case outcomes")
     return rows
 
 
@@ -67,6 +76,11 @@ def _status(case):
     if attr not in attrs:
         raise ValueError("unsupported testcase status")
     status = attrs[attr]
+    result = case.get("result", "").lower()
+    if result not in {"", "completed", "suppressed", "skipped"}:
+        raise ValueError("unsupported testcase result attribute")
+    if result in {"suppressed", "skipped"}:
+        status = max(status, "blocked", key=RANK.__getitem__)
     for child in case:
         if child.tag in CASE_OUTCOMES:
             status = max(status, CASE_OUTCOMES[child.tag], key=RANK.__getitem__)
