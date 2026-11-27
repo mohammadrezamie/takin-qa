@@ -18,6 +18,10 @@ The optional `evidence.evaluate(expected, reports, candidate=..., environment=..
 
 `runner.execute(expected, commands, workdirs, candidate=..., environment=..., log_root=..., max_workers=2, timeout_s=120)` runs trusted absolute argv locally, exactly once per declared command ID. Each shard uses a distinct nonnested disposable directory and serial commands; independent shards run concurrently. Outputs are written to a new local log directory, with no upload or remote dispatch. Failed, missing executables and timed-out commands remain non-green. The runner supplies real command-exit evidence, **not** proof that every test inside a command executed: use test-framework-native inventories/results for release acceptance. The caller owns process trust, service/DB/port isolation, network policy, candidate verification and resource limits. Do not run arbitrary untrusted commands. Public CI tests only synthetic commands.
 
+## Per-test JUnit evidence
+
+`junit_report.parse_junit(xml, expected, identities, shard=..., candidate=..., environment=...)` converts a bounded UTF-8 JUnit XML first-attempt report into the existing evidence format. Provide an exact per-shard mapping of case IDs to (classname, name), and a separately established expected inventory. Missing cases stay missing; unexpected or duplicate cases, count mismatches, unsupported results, malformed XML and DTD/entity declarations are rejected. Failures, errors, skips, non-execution and recognized retry markers are not green. Only case IDs and outcomes are returned, not log/error content. This is a strict supported dialect, not a universal JUnit parser or a proof of report authenticity. Validate each test framework's exported format, preserve the first attempt, and reconcile retries as flaky. Never upload private reports to public CI.
+
 ## Integration boundary
 
 This is an independently useful public utility, not a mirror or remote runner for a private application. Consumers should pin a reviewed version and run their own integration checks. A green public CI run certifies only this utility at its tested commit, not any consuming application.
